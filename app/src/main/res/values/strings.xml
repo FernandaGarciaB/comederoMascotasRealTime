@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">comederoMascotas</string>
+
+        <string-array name="comidas">
+            <item>Desayuno</item>
+            <item>Comida</item>
+            <item>Cena</item>
+        </string-array>
+
+</resources>
+

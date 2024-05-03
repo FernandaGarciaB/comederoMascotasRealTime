@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "167055964713",
+    "project_id": "comedero-f26b8",
+    "storage_bucket": "comedero-f26b8.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:167055964713:android:109c7bab665ef61638ba38",
+        "android_client_info": {
+          "package_name": "com.example.comederomascotas"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCeBu1jfEQAYQmgVG030CiMrPM8ZJIkJuE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
