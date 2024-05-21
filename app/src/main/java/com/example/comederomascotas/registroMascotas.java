@@ -17,10 +17,10 @@ import android.widget.Toast;
 
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.firebase.firestore.DocumentReference;
-import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 
 import java.util.Calendar;
 import java.util.HashMap;
@@ -30,17 +30,16 @@ public class registroMascotas extends AppCompatActivity {
 
     EditText nombreMascota, horaIntervalo, horaInicio, idCollar, cantidadRegistros;
     Button btnRegistrar, btnCancelar;
-    FirebaseFirestore db;
+    DatabaseReference dbRef;
     ImageButton btn_exit;
     FirebaseAuth mAuth;
-    FirebaseFirestore mFirestore;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_registro_mascotas);
 
-        db = FirebaseFirestore.getInstance();
+        dbRef = FirebaseDatabase.getInstance().getReference();
         mAuth = FirebaseAuth.getInstance();
 
         nombreMascota = findViewById(R.id.nombreMascota);
@@ -50,8 +49,6 @@ public class registroMascotas extends AppCompatActivity {
         horaInicio = findViewById(R.id.horaDeInicio);
         idCollar = findViewById(R.id.idC);
         cantidadRegistros = findViewById(R.id.cantidadR);
-        mAuth = FirebaseAuth.getInstance();
-        mFirestore = FirebaseFirestore.getInstance();
         btn_exit = findViewById(R.id.btn_cerrar);
 
         btn_exit.setOnClickListener(new View.OnClickListener() {
@@ -88,11 +85,10 @@ public class registroMascotas extends AppCompatActivity {
     }
 
     private void agregarRegistro(Map<String, Object> mascota) {
-        db.collection("mascotas")
-                .add(mascota)
-                .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
+        dbRef.child("mascotas").push().setValue(mascota)
+                .addOnSuccessListener(new OnSuccessListener<Void>() {
                     @Override
-                    public void onSuccess(DocumentReference documentReference) {
+                    public void onSuccess(Void aVoid) {
                         Toast.makeText(registroMascotas.this, "Mascota registrada con éxito", Toast.LENGTH_SHORT).show();
                     }
                 })
@@ -104,13 +100,10 @@ public class registroMascotas extends AppCompatActivity {
                 });
     }
 
-
     private String obtenerTipoComida(String horaInicioStr) {
-        // Parsear la hora de inicio
         String[] horaInicioParts = horaInicioStr.split(":");
         int horaInicio = Integer.parseInt(horaInicioParts[0]);
 
-        // Determinar el tipo de comida según la hora de inicio
         if (horaInicio >= 7 && horaInicio < 12) {
             return "Desayuno";
         } else if (horaInicio >= 12 && horaInicio < 17) {
@@ -119,8 +112,6 @@ public class registroMascotas extends AppCompatActivity {
             return "Cena";
         }
     }
-
-
 
     public void registrarMascota(View view) {
         String nombre = nombreMascota.getText().toString().trim();
@@ -169,7 +160,6 @@ public class registroMascotas extends AppCompatActivity {
             int intervalo = Integer.parseInt(intervaloHora);
 
             for (int i = 0; i < registrosAutomaticos; i++) {
-
                 Map<String, Object> mascotaAutomatica = new HashMap<>();
                 mascotaAutomatica.putAll(mascotaManual);
 
@@ -179,7 +169,7 @@ public class registroMascotas extends AppCompatActivity {
                 }
 
                 mascotaAutomatica.put("userId", userId);
-                mascotaAutomatica.put("pasos", pasos); // Agregar la cantidad de pasos
+                mascotaAutomatica.put("pasos", pasos);
                 mascotaAutomatica.put("tipoComida", obtenerTipoComida(mascotaAutomatica.get("horaInicio").toString()));
                 agregarRegistro(mascotaAutomatica);
             }
@@ -249,32 +239,6 @@ public class registroMascotas extends AppCompatActivity {
     }
 
     public void cancelarRegistro(View view) {
-        startActivity(new Intent(this, home.class));
-        finish();
-    }
-
-    public void interfazHome(View view) {
-        Intent intent = new Intent(view.getContext(), home.class);
-        view.getContext().startActivity(intent);
-    }
-
-    public void interfazPendientes(View view) {
-        Intent intent = new Intent(view.getContext(), pendientes.class);
-        view.getContext().startActivity(intent);
-    }
-
-    public void interfazInformacion(View view) {
-        Intent intent = new Intent(view.getContext(), informacion.class);
-        view.getContext().startActivity(intent);
-    }
-
-    public void interfazRegistroMascotas(View view) {
-        Intent intent = new Intent(view.getContext(), registroMascotas.class);
-        view.getContext().startActivity(intent);
-    }
-
-    public void interfazLogin(View view) {
-        Intent intent = new Intent(view.getContext(), login.class);
-        view.getContext().startActivity(intent);
+        startActivity(new Intent(registroMascotas.this, pendientes.class));
     }
 }

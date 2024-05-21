@@ -46,4 +46,6 @@ dependencies {
     implementation("com.google.firebase:firebase-auth-ktx")
     implementation ("com.firebaseui:firebase-ui-firestore:8.0.2")
     implementation("com.google.firebase:firebase-firestore")
+    implementation ("com.google.firebase:firebase-database:20.0.5")
+
 }

@@ -15,7 +15,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
@@ -25,11 +26,10 @@ public class editarRegistro extends AppCompatActivity {
     EditText editTextNombre, editTextHoraInicio, editTextIdC;
     RadioButton radioButtonPequeño, radioButtonMediano, radioButtonGrande;
     RadioButton radioButtonCachorro, radioButtonAdulto, radioButtonVejez;
-    FirebaseFirestore db;
+    DatabaseReference dbRef;
     String registroId;
     ImageButton btn_exit;
     FirebaseAuth mAuth;
-    FirebaseFirestore mFirestore;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -37,7 +37,7 @@ public class editarRegistro extends AppCompatActivity {
         setContentView(R.layout.activity_editar_registro);
 
         mAuth = FirebaseAuth.getInstance();
-        mFirestore = FirebaseFirestore.getInstance();
+        dbRef = FirebaseDatabase.getInstance().getReference();
         btn_exit = findViewById(R.id.btn_cerrar);
 
         btn_exit.setOnClickListener(new View.OnClickListener() {
@@ -49,15 +49,12 @@ public class editarRegistro extends AppCompatActivity {
             }
         });
 
-        // Inicializar FirebaseFirestore
-        db = FirebaseFirestore.getInstance();
-
         // Obtener los datos del registro seleccionado de los extras del intent
         Bundle extras = getIntent().getExtras();
         if (extras != null) {
             String nombreMascota = extras.getString("nombreMascota");
             String horaInicio = extras.getString("horaInicio");
-            String idCollarStr = extras.getString("idCollarStr"); // Obtener el ID del collar
+            String idCollarStr = extras.getString("idCollarStr");
             registroId = extras.getString("registroId");
 
             // Configurar EditText con los datos del registro
@@ -68,7 +65,7 @@ public class editarRegistro extends AppCompatActivity {
             editTextHoraInicio.setText(horaInicio);
 
             editTextIdC = findViewById(R.id.editTextIdC);
-            editTextIdC.setText(idCollarStr); // Establecer el texto con el ID del collar
+            editTextIdC.setText(idCollarStr);
 
             // Recuperar los RadioButtons de tamaño y edad
             radioButtonPequeño = findViewById(R.id.radioButton4);
@@ -135,8 +132,8 @@ public class editarRegistro extends AppCompatActivity {
         datosActualizados.put("nombre", nuevoNombre);
         datosActualizados.put("horaInicio", nuevaHoraInicio);
         datosActualizados.put("idCollarStr", nuevoId);
-        datosActualizados.put("tamaño", nuevoTamaño); // Actualizar el tamaño
-        datosActualizados.put("edad", nuevaEdad); // Actualizar la edad
+        datosActualizados.put("tamaño", nuevoTamaño);
+        datosActualizados.put("edad", nuevaEdad);
 
         // Actualizar también los valores de los ramos de comida
         String[] comidaYPasos = obtenerComidaYPasosPorEdadYTamaño(nuevaEdad, nuevoTamaño);
@@ -145,15 +142,15 @@ public class editarRegistro extends AppCompatActivity {
         datosActualizados.put("comida", comida);
         datosActualizados.put("pasos", pasos);
 
-        db.collection("mascotas").document(registroId)
-                .update(datosActualizados)
+        dbRef.child("mascotas").child(registroId)
+                .updateChildren(datosActualizados)
                 .addOnCompleteListener(new OnCompleteListener<Void>() {
                     @Override
                     public void onComplete(@NonNull Task<Void> task) {
                         if (task.isSuccessful()) {
                             Toast.makeText(editarRegistro.this, "Registro actualizado correctamente", Toast.LENGTH_SHORT).show();
-                            setResult(RESULT_OK); // Establecer el resultado como RESULT_OK
-                            finish(); // Cerrar la actividad después de actualizar el registro
+                            setResult(RESULT_OK);
+                            finish();
                         } else {
                             Toast.makeText(editarRegistro.this, "Error al actualizar el registro", Toast.LENGTH_SHORT).show();
                         }

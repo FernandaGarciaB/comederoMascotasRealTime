@@ -18,23 +18,25 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
-import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.QueryDocumentSnapshot;
-import com.google.firebase.firestore.QuerySnapshot;
-
-import java.util.Objects;
-
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.Query;
+import com.google.firebase.database.ValueEventListener;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class pendientes extends AppCompatActivity {
 
-    FirebaseFirestore db;
+    DatabaseReference dbRef;
     LinearLayout contenedorRegistros;
     FirebaseAuth mAuth;
     EditText editTextText;
     ImageButton buttonBuscar, btn_exit;
-    FirebaseFirestore mFirestore;
 
     private static final int EDITAR_REGISTRO_REQUEST = 1;
 
@@ -43,13 +45,11 @@ public class pendientes extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_pendientes);
 
-        db = FirebaseFirestore.getInstance();
+        dbRef = FirebaseDatabase.getInstance().getReference();
         mAuth = FirebaseAuth.getInstance();
         contenedorRegistros = findViewById(R.id.contenedorRegistros);
         editTextText = findViewById(R.id.editTextText);
         buttonBuscar = findViewById(R.id.button2);
-        mAuth = FirebaseAuth.getInstance();
-        mFirestore = FirebaseFirestore.getInstance();
         btn_exit = findViewById(R.id.btn_cerrar);
 
         btn_exit.setOnClickListener(new View.OnClickListener() {
@@ -76,61 +76,59 @@ public class pendientes extends AppCompatActivity {
         if (user != null) {
             String userId = user.getUid();
 
-            db.collection("mascotas")
-                    .whereEqualTo("userId", userId)
-                    .orderBy("horaInicio") // Ordenar los documentos por el campo "horaInicio"
-                    .get()
-                    .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
-                        @Override
-                        public void onComplete(@NonNull Task<QuerySnapshot> task) {
-                            if (task.isSuccessful()) {
+            Query query = dbRef.child("mascotas").orderByChild("userId").equalTo(userId);
+            query.addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                    contenedorRegistros.removeAllViews();
 
-                                contenedorRegistros.removeAllViews();
+                    for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                        Map<String, Object> mascota = (Map<String, Object>) snapshot.getValue();
+                        String nombreMascota = (String) mascota.get("nombre");
+                        String horaInicio = (String) mascota.get("horaInicio");
+                        String edad = (String) mascota.get("edad");
+                        String tamaño = (String) mascota.get("tamaño");
+                        String comida = (String) mascota.get("comida");
+                        String idCollarStr = (String) mascota.get("idCollarStr");
 
-                                for (QueryDocumentSnapshot document : Objects.requireNonNull(task.getResult())) {
-                                    String nombreMascota = document.getString("nombre");
-                                    String horaInicio = document.getString("horaInicio");
-                                    String edad = document.getString("edad");
-                                    String tamaño = document.getString("tamaño");
-                                    String comida = document.getString("comida");
-                                    String idCollarStr = document.getString("idCollarStr");
+                        View registroView = crearVistaRegistroMascota(nombreMascota, horaInicio, edad, tamaño, comida);
+                        if (registroView != null) {
+                            contenedorRegistros.addView(registroView);
 
-                                    View registroView = crearVistaRegistroMascota(nombreMascota, horaInicio, edad, tamaño, comida);
-                                    if (registroView != null) {
-                                        contenedorRegistros.addView(registroView);
-
-                                        ImageButton btnEliminar = registroView.findViewById(R.id.eliminarRegistro);
-                                        btnEliminar.setOnClickListener(new View.OnClickListener() {
-                                            @Override
-                                            public void onClick(View v) {
-                                                eliminarRegistro(document.getId());
-                                            }
-                                        });
-
-                                        ImageButton btnEditar = registroView.findViewById(R.id.editar);
-                                        btnEditar.setOnClickListener(new View.OnClickListener() {
-                                            @Override
-                                            public void onClick(View v) {
-                                                editarRegistro(nombreMascota, horaInicio, edad, tamaño, comida, document.getId(), idCollarStr);
-                                            }
-                                        });
-                                    } else {
-                                        Log.e("pendientes", "Error al crear vista del registro de mascota");
-                                    }
+                            ImageButton btnEliminar = registroView.findViewById(R.id.eliminarRegistro);
+                            btnEliminar.setOnClickListener(new View.OnClickListener() {
+                                @Override
+                                public void onClick(View v) {
+                                    eliminarRegistro(snapshot.getKey());
                                 }
-                            } else {
-                                Log.d("pendientes", "Error al obtener registros de mascotas: ", task.getException());
-                            }
+                            });
+
+                            ImageButton btnEditar = registroView.findViewById(R.id.editar);
+                            btnEditar.setOnClickListener(new View.OnClickListener() {
+                                @Override
+                                public void onClick(View v) {
+                                    editarRegistro(nombreMascota, horaInicio, edad, tamaño, comida, snapshot.getKey(), idCollarStr);
+                                }
+                            });
+                        } else {
+                            Log.e("pendientes", "Error al crear vista del registro de mascota");
                         }
-                    });
+                    }
+                }
+
+                @Override
+                public void onCancelled(@NonNull DatabaseError databaseError) {
+                    Log.e("pendientes", "Error al obtener registros de mascotas: ", databaseError.toException());
+                }
+            });
         } else {
             Log.e("pendientes", "Usuario no autenticado");
         }
     }
 
     private void eliminarRegistro(String idRegistro) {
-        db.collection("mascotas").document(idRegistro)
-                .delete()
+        dbRef.child("mascotas").child(idRegistro)
+                .removeValue()
                 .addOnSuccessListener(new OnSuccessListener<Void>() {
                     @Override
                     public void onSuccess(Void aVoid) {
@@ -176,36 +174,36 @@ public class pendientes extends AppCompatActivity {
         if (user != null) {
             String userId = user.getUid();
 
-            db.collection("mascotas")
-                    .whereEqualTo("userId", userId)
-                    .whereEqualTo("nombre", textoBusqueda)
-                    .orderBy("horaInicio")
-                    .get()
-                    .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
-                        @Override
-                        public void onComplete(@NonNull Task<QuerySnapshot> task) {
-                            if (task.isSuccessful()) {
-                                contenedorRegistros.removeAllViews();
+            Query query = dbRef.child("mascotas").orderByChild("userId").equalTo(userId);
+            query.addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                    contenedorRegistros.removeAllViews();
 
-                                for (QueryDocumentSnapshot document : task.getResult()) {
-                                    String nombreMascota = document.getString("nombre");
-                                    String horaInicio = document.getString("horaInicio");
-                                    String edad = document.getString("edad");
-                                    String tamaño = document.getString("tamaño");
-                                    String comida = document.getString("comida");
+                    for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                        Map<String, Object> mascota = (Map<String, Object>) snapshot.getValue();
+                        String nombreMascota = (String) mascota.get("nombre");
+                        if (nombreMascota != null && nombreMascota.equals(textoBusqueda)) {
+                            String horaInicio = (String) mascota.get("horaInicio");
+                            String edad = (String) mascota.get("edad");
+                            String tamaño = (String) mascota.get("tamaño");
+                            String comida = (String) mascota.get("comida");
 
-                                    View registroView = crearVistaRegistroMascota(nombreMascota, horaInicio, edad, tamaño, comida);
-                                    if (registroView != null) {
-                                        contenedorRegistros.addView(registroView);
-                                    } else {
-                                        Log.e("pendientes", "Error al crear vista del registro de mascota");
-                                    }
-                                }
+                            View registroView = crearVistaRegistroMascota(nombreMascota, horaInicio, edad, tamaño, comida);
+                            if (registroView != null) {
+                                contenedorRegistros.addView(registroView);
                             } else {
-                                Log.d("pendientes", "Error al obtener registros de mascotas: ", task.getException());
+                                Log.e("pendientes", "Error al crear vista del registro de mascota");
                             }
                         }
-                    });
+                    }
+                }
+
+                @Override
+                public void onCancelled(@NonNull DatabaseError databaseError) {
+                    Log.e("pendientes", "Error al buscar registros de mascotas: ", databaseError.toException());
+                }
+            });
         } else {
             Log.e("pendientes", "Usuario no autenticado");
         }
